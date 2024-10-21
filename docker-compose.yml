@@ -5,7 +5,8 @@ services:
     deploy:
       # To use an external database, set replicas to 0 and set DATABASE_URL to the external database url in the .env file
       replicas: 1
-    image: postgres:14
+    image: postgres:16
+    shm_size: 1g
     restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -46,11 +47,11 @@ services:
       - traefik.http.services.windmill_server.loadbalancer.server.port=8000
       #http
       - traefik.http.routers.windmill_server_http.entrypoints=web
-      - traefik.http.routers.windmill_server_http.rule=Host(`windmill.yourdomain.com`)
+      - traefik.http.routers.windmill_server_http.rule=Host(`windmill.dev.incodebiz.com`)
       - traefik.http.routers.windmill_server_http.service=windmill_server
       # https
       - traefik.http.routers.windmill_server_https.entrypoints=websecure
-      - traefik.http.routers.windmill_server_https.rule=Host(`windmill.yourdomain.com`)
+      - traefik.http.routers.windmill_server_https.rule=Host(`windmill.dev.incodebiz.com`)
       - traefik.http.routers.windmill_server_https.service=windmill_server
       - traefik.http.routers.windmill_server_https.tls=true
       - traefik.http.routers.windmill_server_https.tls.certresolver=letsencryptresolver
@@ -79,6 +80,7 @@ services:
       # mount the docker socket to allow to run docker containers from within the workers
       - /var/run/docker.sock:/var/run/docker.sock
       - worker_dependency_cache:/tmp/windmill/cache
+      - worker_logs:/tmp/windmill/logs
 
   ## This worker is specialized for "native" jobs. Native jobs run in-process and thus are much more lightweight than other jobs
   windmill_worker_native:
@@ -86,21 +88,53 @@ services:
     image: ${WM_IMAGE}
     pull_policy: always
     deploy:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
-          cpus: '0.1'
-          memory: 128M
+          cpus: "1"
+          memory: 2048M
     restart: unless-stopped
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - MODE=worker
       - WORKER_GROUP=native
+      - NUM_WORKERS=8
+      - SLEEP_QUEUE=200
     networks:
       - windmill
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - worker_logs:/tmp/windmill/logs
+
+  windmill_indexer:
+    image: ${WM_IMAGE}
+    pull_policy: always
+    deploy:
+      replicas: 0 # set to 1 to enable full-text job and log search
+    restart: unless-stopped
+    expose:
+      - 8001
+    environment:
+      - PORT=8001
+      - DATABASE_URL=${DATABASE_URL}
+      - MODE=indexer
+      - TANTIVY_MAX_INDEXED_JOB_LOG_SIZE__MB=1 # job logs bigger than this will be truncated before indexing
+      - TANTIVY_S3_BACKUP_PERIOD__S=3600 # how often to backup the index into object storage
+      - TANTIVY_INDEX_WRITER_MEMORY_BUDGET__MB=100 # higher budget for higher indexing throughput
+      - TANTIVY_REFRESH_INDEX_PERIOD__S=300 #how often to start indexing new jobs
+      - TANTIVY_DOC_COMMIT_MAX_BATCH_SIZE=100000 #how many documents to batch in one commit
+      - TANTIVY_SHOW_MEMORY_EVERY=10000 #log memory usage and progress every so many documents indexed
+    networks:
+      - windmill
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - windmill_index:/tmp/windmill/search
+      - worker_logs:/tmp/windmill/logs
+  
 
   ## This worker is specialized for reports or scraping jobs. It is assigned the "reports" worker group which has an init script that installs chromium and can be targeted by using the "chromium" worker tag.
   #  windmill_worker_reports:
@@ -144,11 +178,11 @@ services:
       - traefik.http.services.windmill_lsp.loadbalancer.server.port=3001
       #http
       - traefik.http.routers.windmill_lsp_http.entrypoints=web
-      - traefik.http.routers.windmill_lsp_http.rule=Host(`windmill.yourdomain.com`)
+      - traefik.http.routers.windmill_lsp_http.rule=Host(`windmill.dev.incodebiz.com`)
       - traefik.http.routers.windmill_lsp_http.service=windmill_lsp
       # https
       - traefik.http.routers.windmill_lsp_https.entrypoints=websecure
-      - traefik.http.routers.windmill_lsp_https.rule=Host(`windmill.yourdomain.com`)
+      - traefik.http.routers.windmill_lsp_https.rule=Host(`windmill.dev.incodebiz.com`)
       - traefik.http.routers.windmill_lsp_https.service=windmill_lsp
       - traefik.http.routers.windmill_lsp_https.tls=true
       - traefik.http.routers.windmill_lsp_https.tls.certresolver=letsencryptresolver
@@ -166,6 +200,8 @@ services:
 volumes:
   db_data: null
   worker_dependency_cache: null
+  worker_logs: null
+  windmill_index: null
   lsp_cache: null
 
 networks:
