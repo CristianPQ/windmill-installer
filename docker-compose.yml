@@ -38,7 +38,7 @@ services:
       - MODE=server
     networks:
       - windmill
-      - traefik
+      - dokploy-network
     depends_on:
       db:
         condition: service_healthy
@@ -168,7 +168,7 @@ services:
     restart: unless-stopped
     networks:
       - windmill
-      - traefik
+      - dokploy-network
     expose:
       - 3001
     volumes:
@@ -178,11 +178,11 @@ services:
       - traefik.http.services.windmill_lsp.loadbalancer.server.port=3001
       #http
       - traefik.http.routers.windmill_lsp_http.entrypoints=web
-      - traefik.http.routers.windmill_lsp_http.rule=Host(`windmill.dev.incodebiz.com`)
+      - traefik.http.routers.windmill_lsp_http.rule=Host(`lsp.windmill.dev.incodebiz.com`)
       - traefik.http.routers.windmill_lsp_http.service=windmill_lsp
       # https
       - traefik.http.routers.windmill_lsp_https.entrypoints=websecure
-      - traefik.http.routers.windmill_lsp_https.rule=Host(`windmill.dev.incodebiz.com`)
+      - traefik.http.routers.windmill_lsp_https.rule=Host(`lsp.windmill.dev.incodebiz.com`)
       - traefik.http.routers.windmill_lsp_https.service=windmill_lsp
       - traefik.http.routers.windmill_lsp_https.tls=true
       - traefik.http.routers.windmill_lsp_https.tls.certresolver=letsencryptresolver
@@ -207,6 +207,6 @@ volumes:
 networks:
   windmill:
     name: windmill
-  traefik:
-    name: traefik
+  dokploy-network:
+    name: dokploy-network
     external: true
