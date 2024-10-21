@@ -54,7 +54,7 @@ services:
       - traefik.http.routers.windmill_server_https.rule=Host(`windmill.dev.incodebiz.com`)
       - traefik.http.routers.windmill_server_https.service=windmill_server
       - traefik.http.routers.windmill_server_https.tls=true
-      - traefik.http.routers.windmill_server_https.tls.certresolver=letsencryptresolver
+      - traefik.http.routers.windmill_server_https.tls.certresolver=letsencrypt
 
   windmill_worker:
     image: ${WM_IMAGE}
@@ -185,7 +185,7 @@ services:
       - traefik.http.routers.windmill_lsp_https.rule=Host(`lsp.windmill.dev.incodebiz.com`)
       - traefik.http.routers.windmill_lsp_https.service=windmill_lsp
       - traefik.http.routers.windmill_lsp_https.tls=true
-      - traefik.http.routers.windmill_lsp_https.tls.certresolver=letsencryptresolver
+      - traefik.http.routers.windmill_lsp_https.tls.certresolver=letsencrypt
 
   multiplayer:
     image: ghcr.io/windmill-labs/windmill-multiplayer:latest
