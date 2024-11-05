@@ -19,6 +19,8 @@ services:
     environment:
       POSTGRES_PASSWORD: changeme
       POSTGRES_DB: windmill
+    # Add the following lines
+    command: postgres -c 'max_connections=300'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
@@ -36,6 +38,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - MODE=server
+      - DATABASE_CONNECTIONS=20
     networks:
       - windmill
       - dokploy-network
@@ -60,16 +63,17 @@ services:
     image: ${WM_IMAGE}
     pull_policy: always
     deploy:
-      replicas: 3
+      replicas: 1
       resources:
         limits:
           cpus: '1'
-          memory: 2048M
+          memory: 512M
     restart: unless-stopped
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - MODE=worker
       - WORKER_GROUP=default
+      - DATABASE_CONNECTIONS=10
     networks:
       - windmill
     depends_on:
@@ -92,14 +96,15 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 2048M
+          memory: 512M
     restart: unless-stopped
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - MODE=worker
       - WORKER_GROUP=native
-      - NUM_WORKERS=8
+      - NUM_WORKERS=4
       - SLEEP_QUEUE=200
+      - DATABASE_CONNECTIONS=10
     networks:
       - windmill
     depends_on:
