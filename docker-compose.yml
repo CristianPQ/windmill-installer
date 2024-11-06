@@ -20,7 +20,7 @@ services:
       POSTGRES_PASSWORD: changeme
       POSTGRES_DB: windmill
     # Pass arguments without overriding the entrypoint
-    command: ["postgres", "-c", "max_connections=300"]
+    # command: ["postgres", "-c", "max_connections=300"]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
@@ -38,7 +38,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - MODE=server
-      - DATABASE_CONNECTIONS=20
+      - DATABASE_CONNECTIONS=10
     networks:
       - windmill
       - dokploy-network
@@ -73,7 +73,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - MODE=worker
       - WORKER_GROUP=default
-      - DATABASE_CONNECTIONS=10
+      - DATABASE_CONNECTIONS=5
     networks:
       - windmill
     depends_on:
@@ -104,7 +104,7 @@ services:
       - WORKER_GROUP=native
       - NUM_WORKERS=4
       - SLEEP_QUEUE=200
-      - DATABASE_CONNECTIONS=10
+      - DATABASE_CONNECTIONS=5
     networks:
       - windmill
     depends_on:
